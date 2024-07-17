@@ -1,3 +1,28 @@
+# Function to check if the script is running with admin rights
+function Test-AdminRights {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())
+    return $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+# Function to restart the script with admin privileges if not already running as admin
+function Confirm-AdminPrivileges {
+    if (-not (Test-AdminRights)) {
+        Write-Output 'This script needs to be run with administrative privileges.'
+        Write-Output 'Relaunching the script with admin rights...'
+        $scriptPath = $MyInvocation.MyCommand.Definition
+        Start-Process powershell.exe -ArgumentList "-ExecutionPolicy Bypass -File `"$scriptPath`"" -Verb RunAs
+        exit
+    }
+}
+
+# Call function to ensure the script runs with admin privileges
+Ensure-AdminPrivileges
+
+# Function to clear the screen
+function ClearScreen {
+    Clear-Host
+}
+
 # Function to temporarily disable VM adapters
 function DisableVMAdapters {
     try {
@@ -173,20 +198,27 @@ function PromptUserForAction {
 # Main script logic
 function Main {
     do {
-        Clear-Host
+        ClearScreen
         Write-Output 'Choose an option:'
         Write-Output '1. Setup WinRM'
         Write-Output '2. Preview WinRM details'
         Write-Output '3. Both setup WinRM and preview details'
         $choice = Read-Host 'Enter your choice (1, 2, or 3)'
 
-        Clear-Host
-
         if ($choice -eq '1' -or $choice -eq '3') {
+            ClearScreen
             SetupWinRM
+            if ($?) {
+                Write-Output 'WinRM setup completed successfully.'
+            }
+            else {
+                Write-Output 'Error occurred during WinRM setup.'
+            }
+            $null = Read-Host 'Press Enter to continue...'
         }
 
         if ($choice -eq '2' -or $choice -eq '3') {
+            ClearScreen
             try {
                 # Collect and print WinRM details
                 $details = CollectWinRMDetails
@@ -201,14 +233,15 @@ function Main {
                     $filePath = Join-Path -Path $desktopPath -ChildPath 'WinRM_Details.txt'
                     PrintWinRMDetails -details $details -filePath $filePath
                 }
+                $null = Read-Host 'Press Enter to continue...'
             }
             catch {
                 Write-Error "Error during details collection or printing: $_"
+                $null = Read-Host 'Press Enter to continue...'
             }
         }
 
         $actionChoice = PromptUserForAction
-        Clear-Host
     } while ($actionChoice -eq '2')
 
     Write-Output 'Exiting script.'
