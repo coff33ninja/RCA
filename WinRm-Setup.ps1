@@ -16,7 +16,7 @@ function Confirm-AdminPrivileges {
 }
 
 # Call function to ensure the script runs with admin privileges
-Ensure-AdminPrivileges
+Confirm-AdminPrivileges
 
 # Function to clear the screen
 function ClearScreen {
@@ -78,6 +78,9 @@ function CollectWinRMDetails {
 
         $passwordStatus = if (HasPassword($username.Split('\')[-1])) { 'has a password set' } else { 'does not have a password set' }
 
+        # Fetch trusted hosts for WinRM
+        $trustedHosts = Get-Item WSMan:\localhost\Client\TrustedHosts | Select-Object -ExpandProperty Value
+
         return @{
             Username       = $username
             Domain         = $domain
@@ -85,6 +88,7 @@ function CollectWinRMDetails {
             IPAddresses    = $ipAddresses
             MACAddresses   = $macAddresses
             PasswordStatus = "$username $passwordStatus"
+            TrustedHosts   = $trustedHosts -join ', '
         }
     }
     catch {
@@ -109,6 +113,7 @@ Computer Name: $($details.ComputerName)
 IP Addresses: $($details.IPAddresses -join ', ')
 MAC Addresses: $($details.MACAddresses -join ', ')
 Password Status: $($details.PasswordStatus)
+Trusted Hosts: $($details.TrustedHosts)
 "@
 
         Write-Output $content
