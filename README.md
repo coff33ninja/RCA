@@ -19,9 +19,8 @@ This Python application allows you to remotely control devices via WinRM (Window
 Install the required packages using pip:
 
 ```bash
-pip install PyQt6 requests-ntlm wakeonlan
+pip install requests-ntlm wakeonlan kivy kivy-garden pywinrm
 ```
-
 ### Usage
 
 1. **Run the Application**
