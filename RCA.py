@@ -316,57 +316,56 @@ class MainWindow(QMainWindow):
             self.update_device_list()
             time.sleep(5)
 
-
-    def download_winrm_script(self, url, file_name):
+    def download_winrm_script(self, url, file_path):
         try:
-            urllib.request.urlretrieve(url, file_name)
-            print(f"{file_name} downloaded successfully.")
+            urllib.request.urlretrieve(url, file_path)
+            print(f"WinRM script downloaded successfully to {file_path}")
         except Exception as e:
-            print(f"Error downloading {file_name}: {e}")
-            QMessageBox.critical(
-                self, "Download Error", f"Error downloading {file_name}: {e}"
-            )
+            print(f"Error downloading WinRM script: {e}")
+            QMessageBox.critical(self, "Download Error", f"Error downloading WinRM script: {e}")
+
 
     @staticmethod
     def execute_powershell_script(script_path, *args):
         try:
-            result = subprocess.run(
-                ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", script_path]
-                + list(args),
+            process = subprocess.Popen(
+                ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File",   script_path] + list(args),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                universal_newlines=True,
             )
-            return result.stdout.decode(), result.stderr.decode()
+            output, error = process.communicate()
+            return output, error
         except Exception as e:
             print(f"Error executing PowerShell script: {e}")
             return "", str(e)
 
     def setup_winrm(self):
         winrm_script_url = "https://raw.githubusercontent.com/coff33ninja/RCA/main/winrm_script.ps1"
-        winrm_script_file = "winrm_script.ps1"
+        winrm_script_file_path = r"C:\temp\winrm_script.ps1"
 
-        self.download_winrm_script(winrm_script_url, winrm_script_file)
+        self.download_winrm_script(winrm_script_url, winrm_script_file_path)
 
-        output, error = self.execute_powershell_script(winrm_script_file, "1")
+        output, error = self.execute_powershell_script(winrm_script_file_path, "1")
+
         if output:
-            QMessageBox.information(self, "WinRM Setup", output)
+            QMessageBox.information(self, "WinRM Setup", output.strip())
         elif error:
-            QMessageBox.critical(self, "WinRM Setup Error", error)
-
+            QMessageBox.critical(self, "WinRM Setup Error", error.strip())
 
     def view_winrm_details(self):
         output, error = self.execute_powershell_script("winrm_script.ps1", "2")
+
         if output:
-            with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
-                temp_file.write(output)
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as     temp_file:
+                temp_file.write(output.strip())
             QMessageBox.information(
                 self,
                 "WinRM Details",
-                f"WinRM details have been saved to {temp_file.name}. Keep this information safe!",
+                f"WinRM details:\n\n{output.strip()}\n\nHave been saved to {temp_file.name}. Keep this information safe!",
             )
         elif error:
-            QMessageBox.critical(self, "WinRM Details Error", error)
-
+            QMessageBox.critical(self, "WinRM Details Error", error.strip())
 
 if __name__ == "__main__":
     app = QApplication([])
