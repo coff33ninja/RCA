@@ -2,6 +2,9 @@ import subprocess
 import json
 import threading
 import time
+import os
+import tempfile
+import urllib.request
 from wakeonlan import send_magic_packet
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
@@ -74,6 +77,12 @@ class MainWindow(QMainWindow):
         self.remove_button = QPushButton("Remove Device", self)
         self.remove_button.clicked.connect(self.remove_device)
 
+        self.setup_winrm_button = QPushButton("Setup WinRM", self)
+        self.setup_winrm_button.clicked.connect(self.setup_winrm)
+
+        self.view_winrm_button = QPushButton("View WinRM Details", self)
+        self.view_winrm_button.clicked.connect(self.view_winrm_details)
+
         self.devices_list = QListWidget(self)
         self.devices_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
 
@@ -110,6 +119,8 @@ class MainWindow(QMainWindow):
         actions_layout.addWidget(self.reboot_button)
         actions_layout.addWidget(self.shutdown_button)
         actions_layout.addWidget(self.wol_button)
+        actions_layout.addWidget(self.setup_winrm_button)
+        actions_layout.addWidget(self.view_winrm_button)
         main_layout.addLayout(actions_layout)
 
         self.central_widget.setLayout(main_layout)
@@ -304,6 +315,58 @@ class MainWindow(QMainWindow):
                 device.status = "online" if response.returncode == 0 else "offline"
             self.update_device_list()
             time.sleep(5)
+
+
+    def download_winrm_script(self, url, file_name):
+        try:
+            urllib.request.urlretrieve(url, file_name)
+            print(f"{file_name} downloaded successfully.")
+        except Exception as e:
+            print(f"Error downloading {file_name}: {e}")
+            QMessageBox.critical(
+                self, "Download Error", f"Error downloading {file_name}: {e}"
+            )
+
+    @staticmethod
+    def execute_powershell_script(script_path, *args):
+        try:
+            result = subprocess.run(
+                ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", script_path]
+                + list(args),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            return result.stdout.decode(), result.stderr.decode()
+        except Exception as e:
+            print(f"Error executing PowerShell script: {e}")
+            return "", str(e)
+
+    def setup_winrm(self):
+        winrm_script_url = "https://raw.githubusercontent.com/coff33ninja/RCA/main/winrm_script.ps1"
+        winrm_script_file = "winrm_script.ps1"
+
+        self.download_winrm_script(winrm_script_url, winrm_script_file)
+
+        output, error = self.execute_powershell_script(winrm_script_file, "1")
+        if output:
+            QMessageBox.information(self, "WinRM Setup", output)
+        elif error:
+            QMessageBox.critical(self, "WinRM Setup Error", error)
+
+
+    def view_winrm_details(self):
+        output, error = self.execute_powershell_script("winrm_script.ps1", "2")
+        if output:
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+                temp_file.write(output)
+            QMessageBox.information(
+                self,
+                "WinRM Details",
+                f"WinRM details have been saved to {temp_file.name}. Keep this information safe!",
+            )
+        elif error:
+            QMessageBox.critical(self, "WinRM Details Error", error)
+
 
 if __name__ == "__main__":
     app = QApplication([])
