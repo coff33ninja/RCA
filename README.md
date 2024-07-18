@@ -14,7 +14,7 @@ This Python application allows you to remotely control devices via WinRM (Window
 ## Prerequisites
 
 - Python 3.6+
-- Required Python packages: PyQt6, requests-ntlm, wakeonlan
+- Required Python packages: requests-ntlm, wakeonlan, kiv,y kivy-garden, pywinrm
 
 Install the required packages using pip:
 
